@@ -460,7 +460,7 @@
                                 </select>
                             </div>
 
-                            <!-- CREDENCIALES XTREAM (PARA REPRODUCTORES QUE USAN API / PIN) -->
+                            <!-- CREDENCIALES XTREAM -->
                             <div class="section-divider">🌐 Credenciales API Xtream (Para Reproductor)</div>
 
                             <div class="form-group full-width">
@@ -488,7 +488,7 @@
 
                             <div class="form-group full-width">
                                 <label>Contenido M3U Crudo Principal (Opcional o Automático si usas Dropbox)</label>
-                                <textarea id="newM3u" class="form-control" rows="3" placeholder="Pega aquí el contenido M3U crudo o déjalo vacío si usas URL de Dropbox..."></textarea>
+                                <textarea id="newM3u" class="form-control" rows="3" placeholder="Pega aquí el contenido M3U crudo..."></textarea>
                             </div>
 
                             <div class="form-group full-width">
@@ -522,11 +522,19 @@
                                 </div>
                             </div>
 
-                            <!-- OPCIÓN DE UNIÓN DE CONTENIDO -->
-                            <div class="section-divider">⚡ Unificación de Contenido Total</div>
+                            <!-- OPCIÓN DE UNIÓN DE CONTENIDO Y BLOQUEO -->
+                            <div class="section-divider">⚡ Configuración Avanzada y Acceso</div>
+                            
                             <div class="form-group full-width">
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--info);">
-                                    <input type="checkbox" id="mergeTotalContent" checked> Unir todo el contenido total filtrado de ambas cuentas en una sola lista M3U combinada para el PIN.
+                                    <input type="checkbox" id="mergeTotalContent" checked> Unir todo el contenido total filtrado de ambas cuentas en una sola lista M3U.
+                                </label>
+                            </div>
+
+                            <!-- SECCIÓN DE BLOQUEO DE ACCESO -->
+                            <div class="form-group full-width" style="background: rgba(234, 84, 85, 0.1); padding: 15px; border-radius: 6px; border: 1px solid var(--danger);">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--danger); font-weight: bold;">
+                                    <input type="checkbox" id="bloquearAcceso"> 🚫 BLOQUEAR ACCESO PIN (Denegar inicio de sesión en App FIREVOD IPTV)
                                 </label>
                             </div>
 
@@ -553,15 +561,16 @@
                                     <th>Usuario Cliente</th>
                                     <th>Contraseña</th>
                                     <th>Código PIN</th>
-                                    <th>Cuentas / Listas Configuradas</th>
-                                    <th>Filtros Aplicados</th>
+                                    <th>Estado PIN</th>
+                                    <th>Cuentas / Listas</th>
+                                    <th>Filtros</th>
                                     <th>Vencimiento</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="clientsTable">
                                 <tr>
-                                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">
+                                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 25px;">
                                         Cargando usuarios desde Firebase...
                                     </td>
                                 </tr>
@@ -602,6 +611,7 @@
         let cuentasData = [];
         let lineasCreadas = [];
         let modoEdicion = false;
+        let lineaEdicionActual = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             generarPinAcceso();
@@ -623,6 +633,7 @@
                     });
                 }
                 document.getElementById('stat-clientes').textContent = lineasCreadas.length;
+                verificarYActualizarEstados();
                 renderizarTablaClientes();
                 statusEl.textContent = "Conectado y Sincronizado";
                 statusEl.style.color = "var(--success)";
@@ -630,6 +641,23 @@
                 console.error("Error al sincronizar con Firebase:", error);
                 statusEl.textContent = "Error de Permisos / Conexión";
                 statusEl.style.color = "var(--danger)";
+            });
+        }
+
+        // Evalúa en tiempo real los vencimientos y sincroniza el estado en Firebase
+        function verificarYActualizarEstados() {
+            const ahora = Date.now();
+            lineasCreadas.forEach(linea => {
+                if (linea.vencimientoTimestamp && ahora >= linea.vencimientoTimestamp && linea.estado !== "VENCIDO" && !linea.bloqueado) {
+                    linea.estado = "VENCIDO";
+                    linea.sesionActiva = false;
+                    linea.mensajeEstado = "Tu cuenta está vencida. Contacta a tu proveedor.";
+                    database.ref('lineas/' + linea.pin).update({
+                        estado: "VENCIDO",
+                        sesionActiva: false,
+                        mensajeEstado: "Tu cuenta está vencida. Contacta a tu proveedor."
+                    });
+                }
             });
         }
 
@@ -752,7 +780,8 @@
             document.getElementById('newPass').value = pass;
         }
 
-        function calcularVencimiento(duracion) {
+        // Retorna un objeto con timestamp en milisegundos y fecha legible
+        function calcularTimestampVencimiento(duracion) {
             const ahora = new Date();
             if (duracion === '2h') ahora.setHours(ahora.getHours() + 2);
             else if (duracion === '1m') ahora.setMonth(ahora.getMonth() + 1);
@@ -760,7 +789,10 @@
             else if (duracion === '6m') ahora.setMonth(ahora.getMonth() + 6);
             else if (duracion === '12m') ahora.setFullYear(ahora.getFullYear() + 1);
             
-            return ahora.toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            return {
+                timestamp: ahora.getTime(),
+                fechaTexto: ahora.toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+            };
         }
 
         function obtenerCuentaXtreamOptima() {
@@ -769,7 +801,6 @@
             return activas.length > 0 ? activas[Math.floor(Math.random() * activas.length)] : cuentasData[0];
         }
 
-        // Función para descargar contenido remoto de Dropbox / URLs con proxy CORS de respaldo
         async function obtenerContenidoRemoto(url) {
             if (!url) return '';
             let urlOptimizada = url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?raw=1').replace('?dl=1', '?raw=1');
@@ -789,7 +820,6 @@
             return '';
         }
 
-        // Motor de filtrado y unificación de M3U Robusto
         function filtrarTextoM3u(texto, ocultarLive, ocultarVod, ocultarSeries) {
             if (!texto) return '';
             const lineas = texto.split(/\r?\n/);
@@ -852,7 +882,7 @@
             e.preventDefault();
 
             const statusMsg = document.getElementById('form-status-msg');
-            statusMsg.innerHTML = "⏳ <strong>Descargando y procesando listas remotas...</strong>";
+            statusMsg.innerHTML = "⏳ <strong>Procesando y guardando datos...</strong>";
 
             const usuario = document.getElementById('newUser').value.trim();
             const pass = document.getElementById('newPass').value.trim();
@@ -865,23 +895,16 @@
             let dropboxUrl = document.getElementById('newDropboxUrl').value.trim();
             let backupDropboxUrl = document.getElementById('backupDropboxUrl').value.trim();
 
-            // Si hay URL de Dropbox principal, descargar su contenido automáticamente
             if (dropboxUrl) {
                 let contenidoRemoto = await obtenerContenidoRemoto(dropboxUrl);
-                if (contenidoRemoto) {
-                    m3uCrudo = contenidoRemoto;
-                }
+                if (contenidoRemoto) m3uCrudo = contenidoRemoto;
             }
 
-            // Si hay URL de Dropbox de respaldo, descargar su contenido automáticamente
             if (backupDropboxUrl) {
                 let contenidoBackupRemoto = await obtenerContenidoRemoto(backupDropboxUrl);
-                if (contenidoBackupRemoto) {
-                    backupM3u = contenidoBackupRemoto;
-                }
+                if (contenidoBackupRemoto) backupM3u = contenidoBackupRemoto;
             }
 
-            // Credenciales Xtream manuales o automáticas
             const manualServer = document.getElementById('newServerUrl').value.trim();
             const manualXtreamUser = document.getElementById('newXtreamUser').value.trim();
             const manualXtreamPass = document.getElementById('newXtreamPass').value.trim();
@@ -892,7 +915,6 @@
             const xtreamUserFinal = manualXtreamUser || (cuentaAsignada ? cuentaAsignada.usuario : 'N/A');
             const xtreamPassFinal = manualXtreamPass || (cuentaAsignada ? cuentaAsignada.password : 'N/A');
 
-            // Filtros individuales por cuenta
             const hideLiveMain = document.getElementById('hideLiveMain').checked;
             const hideVodMain = document.getElementById('hideVodMain').checked;
             const hideSeriesMain = document.getElementById('hideSeriesMain').checked;
@@ -902,6 +924,7 @@
             const hideSeriesBackup = document.getElementById('hideSeriesBackup').checked;
 
             const mergeTotalContent = document.getElementById('mergeTotalContent').checked;
+            const bloquearAcceso = document.getElementById('bloquearAcceso').checked;
 
             let principalFiltrado = filtrarTextoM3u(m3uCrudo, hideLiveMain, hideVodMain, hideSeriesMain);
             let respaldoFiltrado = filtrarTextoM3u(backupM3u, hideLiveBackup, hideVodBackup, hideSeriesBackup);
@@ -912,6 +935,26 @@
             }
             if (mergeTotalContent && respaldoFiltrado) {
                 m3uFinalCombinado += respaldoFiltrado.replace(/#EXTM3U\s*/gi, '') + "\n";
+            }
+
+            // Cálculo preciso de vigencia y timestamp (Siempre re-calcula al guardar para permitir renovaciones)
+            const ahoraMs = Date.now();
+            const vencimientoData = calcularTimestampVencimiento(duracion);
+
+            // Determinación de estado y flags de sesión para la App
+            const estaVencido = ahoraMs >= vencimientoData.timestamp;
+            let estadoCalculado = "ACTIVO";
+            let mensajeEstadoCalculado = "OK";
+            let sesionActiva = true;
+
+            if (bloquearAcceso) {
+                estadoCalculado = "BLOQUEADO";
+                mensajeEstadoCalculado = "Tu cuenta está bloqueada por el administrador.";
+                sesionActiva = false;
+            } else if (estaVencido) {
+                estadoCalculado = "VENCIDO";
+                mensajeEstadoCalculado = "Tu cuenta está vencida. Contacta a tu proveedor.";
+                sesionActiva = false;
             }
 
             const datosLinea = {
@@ -933,15 +976,20 @@
                 hideVodBackup: hideVodBackup,
                 hideSeriesBackup: hideSeriesBackup,
                 mergeTotalContent: mergeTotalContent,
-                vencimiento: calcularVencimiento(duracion),
+                bloqueado: bloquearAcceso,
+                vencimiento: vencimientoData.fechaTexto,
+                vencimientoTimestamp: vencimientoData.timestamp,
+                estado: estadoCalculado,
+                mensajeEstado: mensajeEstadoCalculado,
+                sesionActiva: sesionActiva,
                 esPrueba: duracion === '2h',
-                timestamp: Date.now()
+                timestampUltimaModificacion: Date.now()
             };
 
             try {
                 await database.ref('lineas/' + pin).set(datosLinea);
                 resetearFormulario();
-                alert(modoEdicion ? `✅ ¡Línea con PIN ${pin} actualizada correctamente!` : `✅ ¡Línea creada, listas descargadas y sincronizadas con éxito!\nPIN: ${pin}`);
+                alert(modoEdicion ? `✅ ¡Línea con PIN ${pin} renovada y actualizada correctamente!` : `✅ ¡Línea creada y sincronizada!\nPIN: ${pin}\nEstado: ${estadoCalculado}`);
             } catch (error) {
                 console.error("Error guardando en Firebase:", error);
                 alert("❌ Error al guardar en Firebase: " + error.message);
@@ -959,6 +1007,8 @@
             }
 
             modoEdicion = true;
+            lineaEdicionActual = linea;
+
             document.getElementById('form-title-text').textContent = `✏️ Editando Línea (PIN: ${pin})`;
             document.getElementById('btnCancelarEdicion').style.display = 'inline-block';
             document.getElementById('btnSubmitForm').textContent = '💾 Actualizar Cambios';
@@ -967,6 +1017,13 @@
             document.getElementById('newPass').value = linea.passCliente || '';
             document.getElementById('newPin').value = linea.pin || pin;
             document.getElementById('newPin').readOnly = true;
+
+            // Ajusta la opción seleccionada por defecto si era prueba
+            if (linea.esPrueba) {
+                document.getElementById('newDuration').value = '2h';
+            } else {
+                document.getElementById('newDuration').value = '1m';
+            }
 
             document.getElementById('newServerUrl').value = linea.serverUrl !== 'Personalizado / M3U' ? linea.serverUrl : '';
             document.getElementById('newXtreamUser').value = linea.xtreamUser !== 'N/A' ? linea.xtreamUser : '';
@@ -986,17 +1043,20 @@
             document.getElementById('hideSeriesBackup').checked = linea.hideSeriesBackup || false;
 
             document.getElementById('mergeTotalContent').checked = linea.mergeTotalContent !== undefined ? linea.mergeTotalContent : true;
+            document.getElementById('bloquearAcceso').checked = linea.bloqueado || linea.estado === "BLOQUEADO";
 
             cambiarVista('view-lines', document.querySelector('[data-target="view-lines"] a'));
         }
 
         function resetearFormulario() {
             modoEdicion = false;
+            lineaEdicionActual = null;
             document.getElementById('form-title-text').textContent = '➕ Crear Nueva Línea / Respaldo M3U';
             document.getElementById('btnCancelarEdicion').style.display = 'none';
             document.getElementById('btnSubmitForm').textContent = '💾 Guardar y Activar Línea';
             document.getElementById('createLineForm').reset();
             document.getElementById('newPin').readOnly = false;
+            document.getElementById('bloquearAcceso').checked = false;
             generarPinAcceso();
         }
 
@@ -1018,7 +1078,7 @@
             tbody.innerHTML = '';
 
             if (lineasCreadas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 25px;">No hay usuarios registrados aún en Firebase.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 25px;">No hay usuarios registrados aún en Firebase.</td></tr>`;
                 return;
             }
 
@@ -1055,6 +1115,14 @@
                 let xtreamUser = item.xtreamUser || 'N/A';
                 let vencimiento = item.vencimiento || 'Sin definir';
 
+                // Distintivos visuales según el estado real
+                let estadoPinBadge = '<span class="badge badge-success">✅ ACTIVO</span>';
+                if (item.bloqueado || item.estado === "BLOQUEADO") {
+                    estadoPinBadge = '<span class="badge badge-danger">🚫 BLOQUEADO</span>';
+                } else if (item.estado === "VENCIDO") {
+                    estadoPinBadge = '<span class="badge badge-warning">⏰ VENCIDO</span>';
+                }
+
                 let cuentaInfo = `<span class="server-tag">${escapeHTML(serverUrl)}</span> (${escapeHTML(xtreamUser)})`;
                 if (item.dropboxUrl) cuentaInfo += `<br><small style="color: var(--info);">☁️ Dropbox Principal Activa</small>`;
                 if (item.backupDropboxUrl || item.backupM3u) cuentaInfo += `<br><small style="color: var(--warning);">🔄 Respaldo Configurado</small>`;
@@ -1064,6 +1132,7 @@
                     <td><strong>${escapeHTML(usuarioCliente)}</strong></td>
                     <td class="pass-cell">${escapeHTML(passCliente)}</td>
                     <td class="pin-cell">🔑 ${escapeHTML(pin)}</td>
+                    <td>${estadoPinBadge}</td>
                     <td>${cuentaInfo}</td>
                     <td>${filtrosInfo}</td>
                     <td>${escapeHTML(vencimiento)}</td>
