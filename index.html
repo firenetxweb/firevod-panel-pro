@@ -71,7 +71,6 @@
         input[type="file"] { display: none; }
         .form-control, .search-input, select, textarea { background-color: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; padding: 10px 15px; border-radius: 6px; width: 100%; outline: none; }
         .form-control:focus, .search-input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-        input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group.full-width { grid-column: 1 / -1; }
@@ -122,7 +121,7 @@
         </div>
     </div>
 
-    <!-- Menú Lateral (Oculto hasta que se inicie sesión) -->
+    <!-- Menú Lateral -->
     <aside class="sidebar hidden" id="sidebar">
         <div class="brand">⚡ FIREVOD PANEL v2.9</div>
         <ul class="nav-menu">
@@ -134,16 +133,15 @@
         </ul>
     </aside>
 
-    <!-- Contenido Principal (Oculto hasta que se inicie sesión) -->
+    <!-- Contenido Principal -->
     <div class="main-wrapper hidden" id="main-wrapper">
         <header class="navbar">
             <div id="nav-title" style="font-weight: 600;">Panel de Administración / Dashboard</div>
-            <div style="color: var(--text-muted); font-size: 0.9rem;">Estado: <span style="color: var(--warning);" id="firebase-status">Conectando...</span></div>
+            <div style="color: var(--text-muted); font-size: 0.9rem;">Estado: <span style="color: var(--success);" id="firebase-status">Sincronizando Firebase...</span></div>
         </header>
 
         <main class="container">
             
-            <!-- VISTA: DASHBOARD -->
             <div id="view-dashboard" class="content-view active">
                 <div class="metrics-grid">
                     <div class="metric-card">
@@ -195,20 +193,20 @@
                 </section>
             </div>
 
-            <!-- VISTA: GESTIÓN Y CREACIÓN DE LÍNEAS -->
             <div id="view-lines" class="content-view">
                 <section class="panel">
                     <div class="panel-header">
-                        <h3>➕ Crear Nueva Línea / Respaldo M3U</h3>
+                        <h3 id="form-title-text">➕ Crear Nueva Línea / Respaldo M3U</h3>
+                        <button type="button" id="btnCancelarEdicion" class="btn-secondary" style="display: none;" onclick="resetearFormulario()">Cancelar Edición</button>
                     </div>
                     
-                    <form id="createLineForm" onsubmit="crearLinea(event)">
+                    <form id="createLineForm" onsubmit="guardarOActualizarLinea(event)">
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Usuario Cliente</label>
                                 <div class="input-group">
                                     <input type="text" id="newUser" class="form-control" placeholder="Ej. cliente_89" required>
-                                    <button type="button" class="btn-secondary" onclick="generarUsuarioAleatorio('newUser')">🎲</button>
+                                    <button type="button" class="btn-secondary" onclick="generarUsuarioAleatorio()">🎲</button>
                                 </div>
                             </div>
 
@@ -216,7 +214,7 @@
                                 <label>Contraseña</label>
                                 <div class="input-group">
                                     <input type="text" id="newPass" class="form-control" placeholder="Ej. pass_902" required>
-                                    <button type="button" class="btn-secondary" onclick="generarPasswordAleatorio('newPass')">🎲</button>
+                                    <button type="button" class="btn-secondary" onclick="generarPasswordAleatorio()">🎲</button>
                                 </div>
                             </div>
 
@@ -224,7 +222,7 @@
                                 <label>Código de Acceso / PIN Único</label>
                                 <div class="input-group">
                                     <input type="text" id="newPin" class="form-control pin-cell" required>
-                                    <button type="button" class="btn-secondary" onclick="generarPinAcceso('newPin')">⚡ Generar PIN</button>
+                                    <button type="button" class="btn-secondary" onclick="generarPinAcceso()">⚡ Generar PIN</button>
                                 </div>
                             </div>
 
@@ -243,24 +241,24 @@
                             <div class="section-divider">🌐 Credenciales API Xtream (Para Reproductor)</div>
 
                             <div class="form-group full-width">
-                                <label style="color: var(--info);">🔄 Inyectar Servidor Guardado</label>
-                                <select id="newServerSelect" class="form-control" onchange="inyectarServidorSeleccionado('new')">
-                                    <option value="">-- Selecciona un servidor de la lista o escribe manualmente --</option>
+                                <label style="color: var(--info);">🔄 Servidor Xtream Guardado (Opcional)</label>
+                                <select id="serverSelect" class="form-control" onchange="inyectarServidorDropdown()">
+                                    <option value="">-- Escribe manualmente abajo o selecciona uno de la lista --</option>
                                 </select>
                             </div>
 
                             <div class="form-group full-width">
-                                <label>URL del Servidor Xtream (Opcional si usas Dashboard)</label>
+                                <label>URL del Servidor Xtream</label>
                                 <input type="text" id="newServerUrl" class="form-control" placeholder="Ej. http://servidor.com:8080">
                             </div>
 
                             <div class="form-group">
-                                <label>Usuario Xtream (Opcional)</label>
+                                <label>Usuario Xtream</label>
                                 <input type="text" id="newXtreamUser" class="form-control" placeholder="Ej. usuario_xtream">
                             </div>
 
                             <div class="form-group">
-                                <label>Contraseña Xtream (Opcional)</label>
+                                <label>Contraseña Xtream</label>
                                 <input type="text" id="newXtreamPass" class="form-control" placeholder="Ej. pass_xtream">
                             </div>
 
@@ -273,7 +271,7 @@
                             </div>
 
                             <div class="form-group full-width">
-                                <label>Contenido M3U Crudo Principal (Opcional o Automático si usas Dropbox)</label>
+                                <label>Contenido M3U Crudo Principal</label>
                                 <textarea id="newM3u" class="form-control" rows="3" placeholder="Pega aquí el contenido M3U crudo..."></textarea>
                             </div>
 
@@ -295,7 +293,7 @@
                             </div>
 
                             <div class="form-group full-width">
-                                <label>Contenido M3U Crudo de Respaldo (Opcional)</label>
+                                <label>Contenido M3U Crudo de Respaldo</label>
                                 <textarea id="backupM3u" class="form-control" rows="3" placeholder="Pega aquí el contenido M3U crudo de respaldo..."></textarea>
                             </div>
 
@@ -329,7 +327,7 @@
                             <span style="font-size: 0.85rem; color: var(--text-muted);" id="form-status-msg">
                                 🔄 <strong>Sincronización en Firebase:</strong> Se guarda en tiempo real.
                             </span>
-                            <button type="submit" class="btn-primary">💾 Crear y Activar Línea</button>
+                            <button type="submit" id="btnSubmitForm" class="btn-primary">💾 Guardar y Activar Línea</button>
                         </div>
                     </form>
                 </section>
@@ -362,138 +360,6 @@
                             </tbody>
                         </table>
                     </div>
-                </section>
-            </div>
-
-            <!-- VISTA: EDICIÓN DE LÍNEA -->
-            <div id="view-edit" class="content-view">
-                <section class="panel" style="border-color: var(--warning);">
-                    <div class="panel-header">
-                        <h3 id="edit-form-title-text" style="color: var(--warning);">✏️ Editar Línea</h3>
-                        <button type="button" class="btn-secondary" onclick="cancelarEdicion()">⬅️ Volver a Líneas</button>
-                    </div>
-                    
-                    <form id="editLineForm" onsubmit="actualizarLinea(event)">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Usuario Cliente</label>
-                                <div class="input-group">
-                                    <input type="text" id="editUser" class="form-control" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Contraseña</label>
-                                <div class="input-group">
-                                    <input type="text" id="editPass" class="form-control" required>
-                                    <button type="button" class="btn-secondary" onclick="generarPasswordAleatorio('editPass')">🎲</button>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Código de Acceso / PIN (No editable)</label>
-                                <div class="input-group">
-                                    <input type="text" id="editPin" class="form-control pin-cell" readonly style="background: rgba(0,0,0,0.2);">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Vencimiento Exacto (Puedes editar la fecha y hora manual)</label>
-                                <input type="datetime-local" id="editExpiration" class="form-control" required>
-                            </div>
-
-                            <!-- CREDENCIALES XTREAM -->
-                            <div class="section-divider">🌐 Credenciales API Xtream</div>
-
-                            <div class="form-group full-width">
-                                <label style="color: var(--info);">🔄 Inyectar Servidor Guardado</label>
-                                <select id="editServerSelect" class="form-control" onchange="inyectarServidorSeleccionado('edit')">
-                                    <option value="">-- Selecciona un servidor de la lista o escribe manualmente --</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>URL del Servidor Xtream</label>
-                                <input type="text" id="editServerUrl" class="form-control">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Usuario Xtream</label>
-                                <input type="text" id="editXtreamUser" class="form-control">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Contraseña Xtream</label>
-                                <input type="text" id="editXtreamPass" class="form-control">
-                            </div>
-
-                            <!-- CUENTA / LISTA PRINCIPAL -->
-                            <div class="section-divider">📺 Cuenta / Lista Principal</div>
-
-                            <div class="form-group full-width">
-                                <label>🔗 URL de Dropbox Principal</label>
-                                <input type="text" id="editDropboxUrl" class="form-control">
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>Contenido M3U Crudo Principal</label>
-                                <textarea id="editM3u" class="form-control" rows="3"></textarea>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>🚫 Filtros Ocultamiento - <strong>Cuenta Principal</strong></label>
-                                <div class="checkbox-group">
-                                    <label><input type="checkbox" id="editHideLiveMain"> Ocultar TV en Vivo</label>
-                                    <label><input type="checkbox" id="editHideVodMain"> Ocultar Películas</label>
-                                    <label><input type="checkbox" id="editHideSeriesMain"> Ocultar Series</label>
-                                </div>
-                            </div>
-
-                            <!-- CUENTA / LISTA DE RESPALDO -->
-                            <div class="section-divider">🔄 Cuenta / Lista de Respaldo</div>
-
-                            <div class="form-group full-width">
-                                <label>🔗 URL de Dropbox de Respaldo</label>
-                                <input type="text" id="editBackupDropboxUrl" class="form-control">
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>Contenido M3U Crudo de Respaldo</label>
-                                <textarea id="editBackupM3u" class="form-control" rows="3"></textarea>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>🚫 Filtros Ocultamiento - <strong>Cuenta de Respaldo</strong></label>
-                                <div class="checkbox-group">
-                                    <label><input type="checkbox" id="editHideLiveBackup"> Ocultar TV en Vivo</label>
-                                    <label><input type="checkbox" id="editHideVodBackup"> Ocultar Películas</label>
-                                    <label><input type="checkbox" id="editHideSeriesBackup"> Ocultar Series</label>
-                                </div>
-                            </div>
-
-                            <!-- OPCIÓN DE UNIÓN DE CONTENIDO Y BLOQUEO -->
-                            <div class="section-divider">⚡ Configuración Avanzada</div>
-                            
-                            <div class="form-group full-width">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--info);">
-                                    <input type="checkbox" id="editMergeTotalContent"> Unir todo el contenido total filtrado.
-                                </label>
-                            </div>
-
-                            <div class="form-group full-width" style="background: rgba(234, 84, 85, 0.1); padding: 15px; border-radius: 6px; border: 1px solid var(--danger);">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--danger); font-weight: bold;">
-                                    <input type="checkbox" id="editBloquearAcceso"> 🚫 BLOQUEAR ACCESO PIN
-                                </label>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); padding: 12px 18px; border-radius: 6px; margin-top: 10px;">
-                            <span id="edit-form-status" style="font-size: 0.85rem; color: var(--text-muted);">
-                                🔄 <strong>Nota:</strong> Modifica únicamente lo que necesites y guarda.
-                            </span>
-                            <button type="submit" class="btn-primary" style="background: var(--warning); color: #000;">💾 Guardar Cambios</button>
-                        </div>
-                    </form>
                 </section>
             </div>
 
@@ -530,6 +396,8 @@
     <script>
         let cuentasData = [];
         let lineasCreadas = [];
+        let modoEdicion = false;
+        let lineaEdicionActual = null;
 
         // GESTIÓN DE AUTENTICACIÓN
         auth.onAuthStateChanged((user) => {
@@ -543,7 +411,7 @@
                 sidebar.classList.remove('hidden');
                 mainWrapper.classList.remove('hidden');
                 
-                generarPinAcceso('newPin');
+                if(!modoEdicion) generarPinAcceso();
                 inicializarEscuchaFirebase();
             } else {
                 // Si no hay sesión, mostramos la pantalla de login
@@ -576,21 +444,17 @@
             });
         }
 
-        // COMUNICACIÓN CON FIREBASE
         function inicializarEscuchaFirebase() {
             const statusEl = document.getElementById('firebase-status');
             
-            // 1. Escuchar las líneas de clientes
+            // Sincronizar Lineas
             database.ref('lineas').on('value', (snapshot) => {
                 lineasCreadas = [];
                 const data = snapshot.val();
                 if (data) {
                     Object.keys(data).forEach(pinKey => {
                         const item = data[pinKey];
-                        lineasCreadas.push({
-                            ...item,
-                            pin: item.pin || pinKey
-                        });
+                        lineasCreadas.push({ ...item, pin: item.pin || pinKey });
                     });
                 }
                 document.getElementById('stat-clientes').textContent = lineasCreadas.length;
@@ -604,7 +468,7 @@
                 statusEl.style.color = "var(--danger)";
             });
 
-            // 2. Escuchar los Servidores Xtream Guardados
+            // Sincronizar Servidores
             database.ref('servidores').on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
@@ -612,45 +476,40 @@
                 } else {
                     cuentasData = [];
                 }
-
                 document.getElementById('stat-total').textContent = cuentasData.length;
                 const servidoresUnicos = new Set();
-                cuentasData.forEach(c => { if(c.servidor && c.servidor !== "N/A") servidoresUnicos.add(c.servidor); });
+                cuentasData.forEach(c => { if(c && c.servidor && c.servidor !== "N/A") servidoresUnicos.add(c.servidor); });
                 document.getElementById('stat-servers').textContent = servidoresUnicos.size;
-
+                
                 renderizarTablaXtream(cuentasData);
                 actualizarVistaServidores();
-                actualizarSelectoresServidores();
+                actualizarSelectorServidores();
             });
         }
 
-        function actualizarSelectoresServidores() {
-            const optionsHTML = '<option value="">-- Selecciona un servidor (o escribe manualmente) --</option>' +
-                cuentasData.map((cuenta, index) => {
-                    if(cuenta.servidor === "N/A") return '';
-                    return `<option value="${index}">🖥️ ${cuenta.servidor} | 👤 Usr: ${cuenta.usuario} | 🟢 Est: ${cuenta.estado}</option>`;
-                }).join('');
-
-            const editSelect = document.getElementById('editServerSelect');
-            const newSelect = document.getElementById('newServerSelect');
-            
-            if (editSelect) editSelect.innerHTML = optionsHTML;
-            if (newSelect) newSelect.innerHTML = optionsHTML;
+        function actualizarSelectorServidores() {
+            const select = document.getElementById('serverSelect');
+            let options = '<option value="">-- Escribe manualmente abajo o selecciona uno de la lista --</option>';
+            cuentasData.forEach((cuenta, idx) => {
+                if (cuenta && cuenta.servidor !== "N/A") {
+                    options += `<option value="${idx}">🖥️ ${cuenta.servidor} | 👤 Usr: ${cuenta.usuario}</option>`;
+                }
+            });
+            select.innerHTML = options;
         }
 
-        function inyectarServidorSeleccionado(prefijo) {
-            const select = document.getElementById(prefijo + 'ServerSelect');
-            const indice = select.value;
-
-            if (indice !== "") {
-                const cuentaElegida = cuentasData[indice];
-                document.getElementById(prefijo + 'ServerUrl').value = cuentaElegida.servidor;
-                document.getElementById(prefijo + 'XtreamUser').value = cuentaElegida.usuario;
-                document.getElementById(prefijo + 'XtreamPass').value = cuentaElegida.password;
+        function inyectarServidorDropdown() {
+            const select = document.getElementById('serverSelect');
+            const idx = select.value;
+            if(idx !== "") {
+                const cuenta = cuentasData[idx];
+                document.getElementById('newServerUrl').value = cuenta.servidor;
+                document.getElementById('newXtreamUser').value = cuenta.usuario;
+                document.getElementById('newXtreamPass').value = cuenta.password;
             } else {
-                document.getElementById(prefijo + 'ServerUrl').value = "";
-                document.getElementById(prefijo + 'XtreamUser').value = "";
-                document.getElementById(prefijo + 'XtreamPass').value = "";
+                document.getElementById('newServerUrl').value = "";
+                document.getElementById('newXtreamUser').value = "";
+                document.getElementById('newXtreamPass').value = "";
             }
         }
 
@@ -674,21 +533,19 @@
             document.querySelectorAll('.content-view').forEach(view => view.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            if(element && element.parentElement) { element.parentElement.classList.add('active'); }
+            element.parentElement.classList.add('active');
             const titulos = {
                 'view-dashboard': 'Panel de Administración / Dashboard',
                 'view-lines': 'Crear y Gestionar Líneas de Clientes',
-                'view-edit': 'Edición Avanzada de Línea',
                 'view-servers': 'Servidores / Balanceador de Conexiones',
                 'view-settings': 'Ajustes del Sistema'
             };
-            document.getElementById('nav-title').textContent = titulos[viewId] || 'Panel';
+            document.getElementById('nav-title').textContent = titulos[viewId];
         }
 
         document.getElementById('fileLoader').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             document.getElementById('file-name').textContent = file.name;
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -700,11 +557,9 @@
         function parsearContenido(rawText) {
             const lines = rawText.split(/\r?\n/);
             let cuentasNuevas = [];
-
             lines.forEach((line) => {
                 let trimmed = line.trim();
                 if (!trimmed || trimmed.startsWith('#') || trimmed.includes('===')) return;
-
                 let servidor = "N/A", usuario = "N/A", password = "N/A", vencimiento = "Sin fecha", conexiones = "1", estado = "Active";
 
                 const urlMatch = trimmed.match(/(?:URL:\s*|http[s]?:\/\/)([^:\/\s]+:\d+|[^\s|,;]+)/i);
@@ -712,7 +567,6 @@
                     let extracted = urlMatch[0].replace(/^URL:\s*/i, '').trim();
                     servidor = extracted.startsWith('http') ? extracted : 'http://' + extracted;
                 }
-
                 const userMatch = trimmed.match(/(?:User|Usuario):\s*([^\s|,;]+)/i);
                 if (userMatch) usuario = userMatch[1].trim();
                 const passMatch = trimmed.match(/(?:Pass|Password|Contraseña):\s*([^\s|,;]+)/i);
@@ -732,20 +586,21 @@
             if(cuentasNuevas.length > 0) {
                 database.ref('servidores').set(cuentasNuevas)
                     .then(() => alert(`✅ ¡${cuentasNuevas.length} cuentas/servidores guardados en Firebase!`))
-                    .catch((err) => alert("❌ Error al guardar servidores en Firebase: " + err.message));
+                    .catch((err) => alert("❌ Error al guardar servidores: " + err.message));
             } else {
-                alert("⚠️ No se encontraron cuentas válidas en el archivo.");
+                alert("⚠️ No se encontraron cuentas válidas.");
             }
         }
 
         function renderizarTablaXtream(data) {
             const tbody = document.getElementById('accountsTable');
             tbody.innerHTML = '';
-            if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No hay cuentas. Carga un archivo .txt.</td></tr>`;
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No se encontraron cuentas válidas.</td></tr>`;
                 return;
             }
             data.forEach((item, index) => {
+                if(!item) return;
                 const tr = document.createElement('tr');
                 let badgeClass = 'badge-success';
                 const estLower = item.estado.toLowerCase();
@@ -765,22 +620,24 @@
             });
         }
 
-        function generarPinAcceso(inputId) {
-            const pin = Math.floor(100000 + Math.random() * 900000);
-            document.getElementById(inputId).value = pin;
+        function generarPinAcceso() {
+            if (!modoEdicion) {
+                const pin = Math.floor(100000 + Math.random() * 900000);
+                document.getElementById('newPin').value = pin;
+            }
         }
 
-        function generarUsuarioAleatorio(inputId) {
+        function generarUsuarioAleatorio() {
             const prefijos = ['usr', 'client', 'tv', 'fast', 'play'];
             const rand = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById(inputId).value = `${prefijos[Math.floor(Math.random() * prefijos.length)]}_${rand}`;
+            document.getElementById('newUser').value = `${prefijos[Math.floor(Math.random() * prefijos.length)]}_${rand}`;
         }
 
-        function generarPasswordAleatorio(inputId) {
+        function generarPasswordAleatorio() {
             const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
             let pass = '';
             for (let i = 0; i < 8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-            document.getElementById(inputId).value = pass;
+            document.getElementById('newPass').value = pass;
         }
 
         function calcularTimestampVencimiento(duracion) {
@@ -795,12 +652,6 @@
                 timestamp: ahora.getTime(),
                 fechaTexto: ahora.toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
             };
-        }
-
-        function obtenerCuentaXtreamOptima() {
-            if (cuentasData.length === 0) return null;
-            const activas = cuentasData.filter(c => !c.estado.toLowerCase().includes('caducad') && !c.estado.toLowerCase().includes('inactiv'));
-            return activas.length > 0 ? activas[Math.floor(Math.random() * activas.length)] : cuentasData[0];
         }
 
         async function obtenerContenidoRemoto(url) {
@@ -876,8 +727,9 @@
             return false;
         }
 
-        async function crearLinea(e) {
+        async function guardarOActualizarLinea(e) {
             e.preventDefault();
+
             const statusMsg = document.getElementById('form-status-msg');
             statusMsg.innerHTML = "⏳ <strong>Procesando y guardando datos...</strong>";
 
@@ -900,14 +752,15 @@
                 if (contenidoBackupRemoto) backupM3u = contenidoBackupRemoto;
             }
 
-            const manualServer = document.getElementById('newServerUrl').value.trim();
+            // CORRECCIÓN PARA EL REPRODUCTOR: Limpiar la URL final y asignar las credenciales manuales o inyectadas
+            let manualServer = document.getElementById('newServerUrl').value.trim();
+            manualServer = manualServer.replace(/\/+$/, ""); // Limpia slash final
             const manualXtreamUser = document.getElementById('newXtreamUser').value.trim();
             const manualXtreamPass = document.getElementById('newXtreamPass').value.trim();
 
-            const cuentaAsignada = obtenerCuentaXtreamOptima();
-            const serverUrlFinal = manualServer || (cuentaAsignada ? cuentaAsignada.servidor : 'Personalizado / M3U');
-            const xtreamUserFinal = manualXtreamUser || (cuentaAsignada ? cuentaAsignada.usuario : 'N/A');
-            const xtreamPassFinal = manualXtreamPass || (cuentaAsignada ? cuentaAsignada.password : 'N/A');
+            const serverUrlFinal = manualServer || 'Personalizado / M3U';
+            const xtreamUserFinal = manualXtreamUser || 'N/A';
+            const xtreamPassFinal = manualXtreamPass || 'N/A';
 
             const hideLiveMain = document.getElementById('hideLiveMain').checked;
             const hideVodMain = document.getElementById('hideVodMain').checked;
@@ -925,33 +778,57 @@
             if (principalFiltrado) m3uFinalCombinado += principalFiltrado.replace(/#EXTM3U\s*/gi, '') + "\n";
             if (mergeTotalContent && respaldoFiltrado) m3uFinalCombinado += respaldoFiltrado.replace(/#EXTM3U\s*/gi, '') + "\n";
 
-            const vencimientoData = calcularTimestampVencimiento(duracion);
             const ahoraMs = Date.now();
+            const vencimientoData = calcularTimestampVencimiento(duracion);
             const estaVencido = ahoraMs >= vencimientoData.timestamp;
 
             let estadoCalculado = "ACTIVO", mensajeEstadoCalculado = "OK", sesionActiva = true;
             if (bloquearAcceso) { estadoCalculado = "BLOQUEADO"; mensajeEstadoCalculado = "Tu cuenta está bloqueada por el administrador."; sesionActiva = false; } 
             else if (estaVencido) { estadoCalculado = "VENCIDO"; mensajeEstadoCalculado = "Tu cuenta está vencida. Contacta a tu proveedor."; sesionActiva = false; }
 
+            // DATOS COMPLETOS PARA EL REPRODUCTOR Y PARA EL PANEL
             const datosLinea = {
-                pin: pin, usuarioCliente: usuario, passCliente: pass,
-                serverUrl: serverUrlFinal, xtreamUser: xtreamUserFinal, xtreamPass: xtreamPassFinal,
-                m3uCrudo: m3uCrudo, dropboxUrl: dropboxUrl, backupM3u: backupM3u, backupDropboxUrl: backupDropboxUrl,
-                m3uFinal: m3uFinalCombinado, hideLiveMain: hideLiveMain, hideVodMain: hideVodMain, hideSeriesMain: hideSeriesMain,
-                hideLiveBackup: hideLiveBackup, hideVodBackup: hideVodBackup, hideSeriesBackup: hideSeriesBackup,
-                mergeTotalContent: mergeTotalContent, bloqueado: bloquearAcceso,
-                vencimiento: vencimientoData.fechaTexto, vencimientoTimestamp: vencimientoData.timestamp,
-                estado: estadoCalculado, mensajeEstado: mensajeEstadoCalculado, sesionActiva: sesionActiva,
-                esPrueba: duracion === '2h', timestampUltimaModificacion: Date.now()
+                pin: pin,
+                usuarioCliente: usuario,
+                passCliente: pass,
+                serverUrl: serverUrlFinal,
+                xtreamUser: xtreamUserFinal,
+                xtreamPass: xtreamPassFinal,
+                
+                // VARIABLES CLAVES QUE SOLUCIONARON EL PROBLEMA DE CREDENCIALES EN EL REPRODUCTOR
+                url: serverUrlFinal, dns: serverUrlFinal,
+                username: xtreamUserFinal, user: xtreamUserFinal,
+                password: xtreamPassFinal, pass: xtreamPassFinal,
+                m3u: m3uFinalCombinado,
+
+                m3uCrudo: m3uCrudo,
+                dropboxUrl: dropboxUrl,
+                backupM3u: backupM3u,
+                backupDropboxUrl: backupDropboxUrl,
+                m3uFinal: m3uFinalCombinado,
+                hideLiveMain: hideLiveMain,
+                hideVodMain: hideVodMain,
+                hideSeriesMain: hideSeriesMain,
+                hideLiveBackup: hideLiveBackup,
+                hideVodBackup: hideVodBackup,
+                hideSeriesBackup: hideSeriesBackup,
+                mergeTotalContent: mergeTotalContent,
+                bloqueado: bloquearAcceso,
+                vencimiento: vencimientoData.fechaTexto,
+                vencimientoTimestamp: vencimientoData.timestamp,
+                estado: estadoCalculado,
+                mensajeEstado: mensajeEstadoCalculado,
+                sesionActiva: sesionActiva,
+                esPrueba: duracion === '2h',
+                timestampUltimaModificacion: Date.now()
             };
 
             try {
                 await database.ref('lineas/' + pin).set(datosLinea);
-                document.getElementById('createLineForm').reset();
-                generarPinAcceso('newPin');
-                document.getElementById('newServerSelect').value = '';
-                alert(`✅ ¡Línea creada y sincronizada!\nPIN: ${pin}`);
+                resetearFormulario();
+                alert(modoEdicion ? `✅ ¡Línea con PIN ${pin} renovada y actualizada correctamente!` : `✅ ¡Línea creada y sincronizada!\nPIN: ${pin}\nEstado: ${estadoCalculado}`);
             } catch (error) {
+                console.error("Error guardando en Firebase:", error);
                 alert("❌ Error al guardar en Firebase: " + error.message);
             } finally {
                 statusMsg.innerHTML = "🔄 <strong>Sincronización en Firebase:</strong> Se guarda en tiempo real.";
@@ -960,123 +837,57 @@
 
         function cargarLineaParaEditar(pin) {
             const linea = lineasCreadas.find(l => String(l.pin) === String(pin));
-            if (!linea) { alert("⚠️ No se encontró la línea."); return; }
+            if (!linea) { alert("⚠️ No se pudo encontrar la información de esta línea."); return; }
 
-            cambiarVista('view-edit', null);
+            modoEdicion = true;
+            lineaEdicionActual = linea;
 
-            document.getElementById('editUser').value = linea.usuarioCliente || '';
-            document.getElementById('editPass').value = linea.passCliente || '';
-            document.getElementById('editPin').value = linea.pin || pin;
+            document.getElementById('form-title-text').textContent = `✏️ Editando Línea (PIN: ${pin})`;
+            document.getElementById('btnCancelarEdicion').style.display = 'inline-block';
+            document.getElementById('btnSubmitForm').textContent = '💾 Actualizar Cambios';
 
-            if (linea.vencimientoTimestamp) {
-                const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-                const localISOTime = (new Date(linea.vencimientoTimestamp - tzOffset)).toISOString().slice(0, 16);
-                document.getElementById('editExpiration').value = localISOTime;
-            }
+            document.getElementById('newUser').value = linea.usuarioCliente || '';
+            document.getElementById('newPass').value = linea.passCliente || '';
+            document.getElementById('newPin').value = linea.pin || pin;
+            document.getElementById('newPin').readOnly = true;
 
-            document.getElementById('editServerUrl').value = linea.serverUrl !== 'Personalizado / M3U' ? linea.serverUrl : '';
-            document.getElementById('editXtreamUser').value = linea.xtreamUser !== 'N/A' ? linea.xtreamUser : '';
-            document.getElementById('editXtreamPass').value = linea.xtreamPass !== 'N/A' ? linea.xtreamPass : '';
-            
-            document.getElementById('editServerSelect').value = '';
+            if (linea.esPrueba) document.getElementById('newDuration').value = '2h';
+            else document.getElementById('newDuration').value = '1m';
 
-            document.getElementById('editDropboxUrl').value = linea.dropboxUrl || '';
-            document.getElementById('editM3u').value = linea.m3uCrudo || '';
-            document.getElementById('editBackupDropboxUrl').value = linea.backupDropboxUrl || '';
-            document.getElementById('editBackupM3u').value = linea.backupM3u || '';
+            document.getElementById('newServerUrl').value = linea.serverUrl !== 'Personalizado / M3U' ? linea.serverUrl : '';
+            document.getElementById('newXtreamUser').value = linea.xtreamUser !== 'N/A' ? linea.xtreamUser : '';
+            document.getElementById('newXtreamPass').value = linea.xtreamPass !== 'N/A' ? linea.xtreamPass : '';
 
-            document.getElementById('editHideLiveMain').checked = linea.hideLiveMain || false;
-            document.getElementById('editHideVodMain').checked = linea.hideVodMain || false;
-            document.getElementById('editHideSeriesMain').checked = linea.hideSeriesMain || false;
-            document.getElementById('editHideLiveBackup').checked = linea.hideLiveBackup || false;
-            document.getElementById('editHideVodBackup').checked = linea.hideVodBackup || false;
-            document.getElementById('editHideSeriesBackup').checked = linea.hideSeriesBackup || false;
+            document.getElementById('serverSelect').value = '';
 
-            document.getElementById('editMergeTotalContent').checked = linea.mergeTotalContent !== undefined ? linea.mergeTotalContent : true;
-            document.getElementById('editBloquearAcceso').checked = linea.bloqueado || linea.estado === "BLOQUEADO";
+            document.getElementById('newDropboxUrl').value = linea.dropboxUrl || '';
+            document.getElementById('newM3u').value = linea.m3uCrudo || '';
+            document.getElementById('backupDropboxUrl').value = linea.backupDropboxUrl || '';
+            document.getElementById('backupM3u').value = linea.backupM3u || '';
+
+            document.getElementById('hideLiveMain').checked = linea.hideLiveMain || false;
+            document.getElementById('hideVodMain').checked = linea.hideVodMain || false;
+            document.getElementById('hideSeriesMain').checked = linea.hideSeriesMain || false;
+            document.getElementById('hideLiveBackup').checked = linea.hideLiveBackup || false;
+            document.getElementById('hideVodBackup').checked = linea.hideVodBackup || false;
+            document.getElementById('hideSeriesBackup').checked = linea.hideSeriesBackup || false;
+            document.getElementById('mergeTotalContent').checked = linea.mergeTotalContent !== undefined ? linea.mergeTotalContent : true;
+            document.getElementById('bloquearAcceso').checked = linea.bloqueado || linea.estado === "BLOQUEADO";
+
+            cambiarVista('view-lines', document.querySelector('[data-target="view-lines"] a'));
         }
 
-        async function actualizarLinea(e) {
-            e.preventDefault();
-            const statusMsg = document.getElementById('edit-form-status');
-            statusMsg.innerHTML = "⏳ <strong>Guardando cambios...</strong>";
-
-            const pin = document.getElementById('editPin').value.trim();
-            const usuario = document.getElementById('editUser').value.trim();
-            const pass = document.getElementById('editPass').value.trim();
-            
-            const inputFecha = document.getElementById('editExpiration').value;
-            const vencimientoTimestamp = new Date(inputFecha).getTime();
-            const vencimientoTexto = new Date(vencimientoTimestamp).toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-            
-            let m3uCrudo = document.getElementById('editM3u').value.trim();
-            let backupM3u = document.getElementById('editBackupM3u').value.trim();
-            let dropboxUrl = document.getElementById('editDropboxUrl').value.trim();
-            let backupDropboxUrl = document.getElementById('editBackupDropboxUrl').value.trim();
-
-            if (dropboxUrl) {
-                let contenidoRemoto = await obtenerContenidoRemoto(dropboxUrl);
-                if (contenidoRemoto) m3uCrudo = contenidoRemoto;
-            }
-            if (backupDropboxUrl) {
-                let contenidoBackupRemoto = await obtenerContenidoRemoto(backupDropboxUrl);
-                if (contenidoBackupRemoto) backupM3u = contenidoBackupRemoto;
-            }
-
-            const serverUrlFinal = document.getElementById('editServerUrl').value.trim() || 'Personalizado / M3U';
-            const xtreamUserFinal = document.getElementById('editXtreamUser').value.trim() || 'N/A';
-            const xtreamPassFinal = document.getElementById('editXtreamPass').value.trim() || 'N/A';
-
-            const hideLiveMain = document.getElementById('editHideLiveMain').checked;
-            const hideVodMain = document.getElementById('editHideVodMain').checked;
-            const hideSeriesMain = document.getElementById('editHideSeriesMain').checked;
-            const hideLiveBackup = document.getElementById('editHideLiveBackup').checked;
-            const hideVodBackup = document.getElementById('editHideVodBackup').checked;
-            const hideSeriesBackup = document.getElementById('editHideSeriesBackup').checked;
-            const mergeTotalContent = document.getElementById('editMergeTotalContent').checked;
-            const bloquearAcceso = document.getElementById('editBloquearAcceso').checked;
-
-            let principalFiltrado = filtrarTextoM3u(m3uCrudo, hideLiveMain, hideVodMain, hideSeriesMain);
-            let respaldoFiltrado = filtrarTextoM3u(backupM3u, hideLiveBackup, hideVodBackup, hideSeriesBackup);
-
-            let m3uFinalCombinado = "#EXTM3U\n";
-            if (principalFiltrado) m3uFinalCombinado += principalFiltrado.replace(/#EXTM3U\s*/gi, '') + "\n";
-            if (mergeTotalContent && respaldoFiltrado) m3uFinalCombinado += respaldoFiltrado.replace(/#EXTM3U\s*/gi, '') + "\n";
-
-            const ahoraMs = Date.now();
-            const estaVencido = ahoraMs >= vencimientoTimestamp;
-
-            let estadoCalculado = "ACTIVO", mensajeEstadoCalculado = "OK", sesionActiva = true;
-            if (bloquearAcceso) { estadoCalculado = "BLOQUEADO"; mensajeEstadoCalculado = "Tu cuenta está bloqueada por el administrador."; sesionActiva = false; } 
-            else if (estaVencido) { estadoCalculado = "VENCIDO"; mensajeEstadoCalculado = "Tu cuenta está vencida. Contacta a tu proveedor."; sesionActiva = false; }
-
-            const datosLinea = {
-                pin: pin, usuarioCliente: usuario, passCliente: pass,
-                serverUrl: serverUrlFinal, xtreamUser: xtreamUserFinal, xtreamPass: xtreamPassFinal,
-                m3uCrudo: m3uCrudo, dropboxUrl: dropboxUrl, backupM3u: backupM3u, backupDropboxUrl: backupDropboxUrl,
-                m3uFinal: m3uFinalCombinado, hideLiveMain: hideLiveMain, hideVodMain: hideVodMain, hideSeriesMain: hideSeriesMain,
-                hideLiveBackup: hideLiveBackup, hideVodBackup: hideVodBackup, hideSeriesBackup: hideSeriesBackup,
-                mergeTotalContent: mergeTotalContent, bloqueado: bloquearAcceso,
-                vencimiento: vencimientoTexto, vencimientoTimestamp: vencimientoTimestamp,
-                estado: estadoCalculado, mensajeEstado: mensajeEstadoCalculado, sesionActiva: sesionActiva,
-                timestampUltimaModificacion: Date.now()
-            };
-
-            try {
-                await database.ref('lineas/' + pin).update(datosLinea);
-                alert(`✅ ¡Línea con PIN ${pin} actualizada correctamente!`);
-                cancelarEdicion();
-            } catch (error) {
-                alert("❌ Error al actualizar en Firebase: " + error.message);
-            } finally {
-                statusMsg.innerHTML = "🔄 <strong>Nota:</strong> Modifica únicamente lo que necesites y guarda.";
-            }
-        }
-
-        function cancelarEdicion() {
-            document.getElementById('editLineForm').reset();
-            document.getElementById('editServerSelect').value = '';
-            cambiarVista('view-lines', document.querySelector('.nav-item[data-target="view-lines"] a'));
+        function resetearFormulario() {
+            modoEdicion = false;
+            lineaEdicionActual = null;
+            document.getElementById('form-title-text').textContent = '➕ Crear Nueva Línea / Respaldo M3U';
+            document.getElementById('btnCancelarEdicion').style.display = 'none';
+            document.getElementById('btnSubmitForm').textContent = '💾 Guardar y Activar Línea';
+            document.getElementById('createLineForm').reset();
+            document.getElementById('newPin').readOnly = false;
+            document.getElementById('bloquearAcceso').checked = false;
+            document.getElementById('serverSelect').value = '';
+            generarPinAcceso();
         }
 
         function copiarM3uFinal(pin) {
@@ -1111,7 +922,7 @@
                     if (item.hideSeriesBackup) filtrosInfo += '[Sin Series] ';
                 } else { filtrosInfo += 'Todo visible '; }
                 filtrosInfo += '</small>';
-                if(item.mergeTotalContent) filtrosInfo += '<br><span class="badge badge-info">⚡ Contenido Total Unido</span>';
+                if(item.mergeTotalContent) filtrosInfo += '<br><span class="badge badge-info">⚡ Contenido Unido</span>';
 
                 let usuarioCliente = item.usuarioCliente || 'Cliente';
                 let passCliente = item.passCliente || '******';
@@ -1121,8 +932,8 @@
                 let vencimiento = item.vencimiento || 'Sin definir';
 
                 let estadoPinBadge = '<span class="badge badge-success">✅ ACTIVO</span>';
-                if (item.bloqueado || item.estado === "BLOQUEADO") { estadoPinBadge = '<span class="badge badge-danger">🚫 BLOQUEADO</span>'; } 
-                else if (item.estado === "VENCIDO") { estadoPinBadge = '<span class="badge badge-warning">⏰ VENCIDO</span>'; }
+                if (item.bloqueado || item.estado === "BLOQUEADO") estadoPinBadge = '<span class="badge badge-danger">🚫 BLOQUEADO</span>';
+                else if (item.estado === "VENCIDO") estadoPinBadge = '<span class="badge badge-warning">⏰ VENCIDO</span>';
 
                 let cuentaInfo = `<span class="server-tag">${escapeHTML(serverUrl)}</span> (${escapeHTML(xtreamUser)})`;
                 if (item.dropboxUrl) cuentaInfo += `<br><small style="color: var(--info);">☁️ Dropbox Principal Activa</small>`;
@@ -1150,17 +961,22 @@
 
         function actualizarVistaServidores() {
             const container = document.getElementById('servers-list-container');
-            if (cuentasData.length === 0) { container.innerHTML = `<p style="color: var(--text-muted);">No hay servidores registrados.</p>`; return; }
+            if (cuentasData.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted);">No hay servidores cargados. Por favor sube tu lista en el Dashboard.</p>`;
+                return;
+            }
             let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
             cuentasData.forEach(cuenta => {
-                html += `
-                <div style="background: var(--bg-dark); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-weight: bold; color: var(--info);">${escapeHTML(cuenta.servidor)}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Usuario: ${escapeHTML(cuenta.usuario)} | Vence: ${escapeHTML(cuenta.vencimiento)}</div>
-                    </div>
-                    <div><span class="badge badge-info">${escapeHTML(cuenta.conexiones)} Conexiones</span></div>
-                </div>`;
+                if(cuenta) {
+                    html += `
+                    <div style="background: var(--bg-dark); padding: 15px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: bold; color: var(--info);">${escapeHTML(cuenta.servidor)}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Usuario: ${escapeHTML(cuenta.usuario)} | Vence: ${escapeHTML(cuenta.vencimiento)}</div>
+                        </div>
+                        <div><span class="badge badge-info">${escapeHTML(cuenta.conexiones)} Conexiones</span></div>
+                    </div>`;
+                }
             });
             html += '</div>';
             container.innerHTML = html;
@@ -1169,7 +985,7 @@
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase();
             const filtrados = cuentasData.filter(item => 
-                item.servidor.toLowerCase().includes(query) || item.usuario.toLowerCase().includes(query) || item.estado.toLowerCase().includes(query)
+                item && (item.servidor.toLowerCase().includes(query) || item.usuario.toLowerCase().includes(query) || item.estado.toLowerCase().includes(query))
             );
             renderizarTablaXtream(filtrados);
         });
@@ -1178,4 +994,5 @@
     </script>
 </body>
 </html>
+
 
